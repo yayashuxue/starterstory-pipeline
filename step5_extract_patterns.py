@@ -3,6 +3,7 @@ import csv
 import json
 import time
 import re
+import hashlib
 from datetime import datetime
 from dotenv import load_dotenv
 from anthropic import Anthropic, APIStatusError, APIConnectionError, APITimeoutError
@@ -48,9 +49,7 @@ def extract_patterns_for_category(category, all_content):
 
 Here is the content from all videos for this category:
 
-{chr(10).join(content_list[:100])}  
-
-{"... (truncated for length)" if len(content_list) > 100 else ""}
+{chr(10).join(content_list)}
 
 Your task:
 1. **Identify 5-7 Common Patterns**: What are the recurring strategies, approaches, or themes across these stories?
@@ -146,6 +145,7 @@ def process_pattern_extraction(test_category=None):
     """
     input_file = 'chapters_analysis_refined.csv'
     output_file = 'patterns_analysis.json'
+    metadata_file = 'patterns_analysis.meta.json'
     
     # Read refined CSV
     if not os.path.exists(input_file):
@@ -165,6 +165,17 @@ def process_pattern_extraction(test_category=None):
         with open(output_file, 'r', encoding='utf-8') as f:
             all_results = json.load(f)
         print(f"✅ Loaded existing results for {len(all_results)} categories")
+
+    fingerprints = {}
+    for category in STANDARD_CATEGORIES:
+        content = [(row['video_id'], row.get(category, '')) for row in rows]
+        fingerprints[category] = hashlib.sha256(
+            json.dumps(content, ensure_ascii=False, sort_keys=True).encode('utf-8')
+        ).hexdigest()
+    existing_fingerprints = {}
+    if os.path.exists(metadata_file):
+        with open(metadata_file, 'r', encoding='utf-8') as f:
+            existing_fingerprints = json.load(f)
     
     # Determine which categories to process
     if test_category:
@@ -175,8 +186,11 @@ def process_pattern_extraction(test_category=None):
         categories_to_process = [test_category]
         print(f"\n🧪 TEST MODE: Processing only '{test_category}'\n")
     else:
-        # Skip categories that already have results
-        categories_to_process = [c for c in STANDARD_CATEGORIES if c not in all_results]
+        # Recompute when source rows change. Existing output without metadata is stale.
+        categories_to_process = [
+            c for c in STANDARD_CATEGORIES
+            if c not in all_results or existing_fingerprints.get(c) != fingerprints[c]
+        ]
         print(f"🎯 Categories to process: {len(categories_to_process)}")
         if len(all_results) > 0:
             print(f"   Already completed: {', '.join(all_results.keys())}")
@@ -207,6 +221,10 @@ def process_pattern_extraction(test_category=None):
             # Save immediately after each category
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(all_results, f, indent=2, ensure_ascii=False)
+
+            existing_fingerprints[category] = fingerprints[category]
+            with open(metadata_file, 'w', encoding='utf-8') as f:
+                json.dump(existing_fingerprints, f, indent=2)
             
             print(f"   💾 Saved results")
         else:
@@ -247,4 +265,3 @@ if __name__ == "__main__":
         process_pattern_extraction(test_category=test_category)
     else:
         process_pattern_extraction()
-
