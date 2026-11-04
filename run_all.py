@@ -26,7 +26,9 @@ def main():
     steps = [
         (1, "step1_get_video_urls.py", "Getting video URLs"),
         (2, "step2_get_transcripts.py", "Downloading transcripts"),
-        (3, "step3_analyze_chapters.py", "Analyzing chapters")
+        (3, "step3_analyze_chapters.py", "Analyzing chapters"),
+        (4, "step4_summarize_and_refine.py", "Summarizing and refining"),
+        (5, "step5_extract_patterns.py", "Extracting cross-video patterns"),
     ]
     
     for step_num, script, desc in steps:
@@ -37,10 +39,11 @@ def main():
     print("🎉 PIPELINE COMPLETE!")
     print('='*60)
     print("\nOutput files:")
-    print("  - analysis_results.json (detailed analysis)")
-    print("  - starter_story_database.csv (full database)")
-    print("  - starter_story_database_simple.csv (simple view)")
+    print("  - video_urls.json (video metadata)")
+    print("  - transcripts/ (raw transcripts)")
+    print("  - chapters_analysis.csv (chapter excerpts)")
+    print("  - chapters_analysis_refined.csv (per-video summaries)")
+    print("  - patterns_analysis.json (cross-video patterns)")
 
 if __name__ == "__main__":
     main()
-
